@@ -121,7 +121,7 @@ function calcPL(p){
   var mod=gp('pMOD'), fl=gp('pFL'), gf=gp('pGF');
   var impPct=gp('pIMP')/100;
   var impF=gp('pIMPF')||0;
-  var imp=pv*impPct+impF+(p.imp||0)>0?p.imp||impF:pv*impPct+impF;
+  var imp=(p.imp&&p.imp>0)?p.imp:(pv*impPct+impF);
   var cmg=pv-mp/r-mod-imp-fl;
   var cmgPct=pv>0?cmg/pv:0;
   var ebitda=cmg-gf;
