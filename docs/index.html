@@ -122,7 +122,8 @@ function calcPL(p){
   var impPct=gp('pIMP')/100;
   var impF=gp('pIMPF')||0;
   var imp=(p.imp&&p.imp>0)?p.imp:(pv*impPct+impF);
-  var cmg=pv-mp/r-mod-imp-fl;
+  var nac=p.nac||0;
+  var cmg=pv-mp/r-mod-imp-fl-nac;
   var cmgPct=pv>0?cmg/pv:0;
   var ebitda=cmg-gf;
   var ebitdaPct=pv>0?ebitda/pv:0;
