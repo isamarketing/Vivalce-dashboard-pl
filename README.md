@@ -1,20 +1,31 @@
-# VIVALCE — Dashboard P&L por Producto
+# VIVALCE — Dashboard Integral P&L
 
-Dashboard interactivo de Pérdidas & Ganancias por producto para VIVALCE S.A.
+Dashboard unificado de Pérdidas & Ganancias que integra las 3 herramientas de gestión financiera de VIVALCE en una sola aplicación.
 
-## URL
+## Acceso
+https://isamarketing.github.io/Vivalce-dashboard-pl/
 
-[https://isamarketing.github.io/vivalce-dashboard-pl/dashboard.html](https://isamarketing.github.io/vivalce-dashboard-pl/dashboard.html)
+## Herramientas integradas
 
-## Vistas
+### P&L (7 tabs)
+- **Resumen Ejecutivo** — KPIs, top ganadores/perdedores, P&L por proveedor
+- **Por Proveedor** — revenue, CMG, EBITDA por proveedor
+- **Por Producto** — detalle completo con filtros y búsqueda
+- **Pricing Estratégico** — breakeven, +10%, +20% por producto
+- **Alertas** — productos con costo > precio, EBITDA negativo
+- **Simulador** — ajuste precios y vea el impacto en EBITDA
+- **Vista Unitaria** — waterfall de costos USD/kg
 
-1. **Resumen Ejecutivo** — KPIs, Top 10 ganadores/perdedores, proveedores con semáforos
-2. **Por Proveedor** — Revenue, EBITDA, margen por proveedor
-3. **Por Producto** — Tabla filtrable/ordenable, 67 productos
-4. **Alertas** — Costo > Precio, EBITDA negativo, acción sugerida
-5. **Simulador** — Sliders para cambiar precio y ver impacto EBITDA
-6. **Vista Unitaria** — Waterfall USD/kg con detalle clickeable
+### 📦 Inventario (integrado)
+- Costo financiero por producto basado en stock standard
+- Lead time y stock de seguridad editables → actualiza P&L automáticamente
 
-## Parte del Sistema P&L
+### 💼 Asignación de Gastos (integrado)
+- Carga Excel de gastos operativos
+- Asignación RECSA/VIVALCE con sliders
+- Output (GF y MOD USD/kg) → actualiza P&L automáticamente
 
-Este dashboard es la **Capa 4** del Sistema de Gestión P&L por Producto para VIVALCE y RECSA.
+## Actualización
+1. **Costos MP / Precios / Volúmenes** → Cargar Excel Master (botón 📂)
+2. **Gastos operativos** → Tab "Asig. Gastos" → cargar Excel
+3. **Inventario** → Tab "Inventario" → ajustar lead times
