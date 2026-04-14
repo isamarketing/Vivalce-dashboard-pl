@@ -85,7 +85,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
   <div><label>MOD+E+L USD/kg</label><br><input type="number" id="pMOD" value="0.2879" step="0.01" onchange="recalcAll()"><div style="font-size:8px;color:var(--pu);margin-top:1px">← Asig. Gastos</div></div>
   <div><label>Flete USD/kg</label><br><input type="number" id="pFL" value="0.20" step="0.01" onchange="recalcAll()"></div>
   <div class="sep"></div>
-  <div><label>Imp Fijo USD/kg</label><br><input type="number" id="pIMPF" value="0.047" step="0.001" onchange="recalcAll()"></div>
+  <input type="hidden" id="pIMP" value="0"><div><label>Imp Fijo USD/kg</label><br><input type="number" id="pIMPF" value="0.047" step="0.001" onchange="recalcAll()"></div>
   <div><label>Financieros</label><br><input type="number" id="pFIN" value="0.1654" step="0.01" onchange="recalcAll()"></div>
   <div><label>TNA %</label><br><input type="number" id="pTNA" value="35" step="1" onchange="recalcAll()"><div style="font-size:8px;color:var(--pu);margin-top:1px">← Inventario</div></div>
 </div>
