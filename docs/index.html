@@ -132,9 +132,13 @@ var tabNames=[
   {id:"alertas",label:"Alertas",sec:false},
   {id:"simulador",label:"Simulador",sec:false},
   {id:"unitario",label:"Vista Unitaria",sec:false},
+  {id:"cotizador",label:"💰 Cotizador",sec:true},
   {id:"inventario",label:"📦 Inventario",sec:true},
   {id:"gastos",label:"💼 Asig. Gastos",sec:true}
 ];
+
+// Estado del Cotizador
+window._cotState = {productoP_idx: -1, volMensual: 1000, precio: 0, lineaFiltro: 'ALL', busqueda: ''};
 
 function gp(id){return parseFloat(document.getElementById(id).value)||0}
 
@@ -199,7 +203,7 @@ function renderTabs(){
 }
 
 function renderContent(){
-  var fn={resumen:renderResumen,lineas:renderLineas,productos:renderProductos,pricing:renderPricing,alertas:renderAlertas,simulador:renderSimulador,unitario:renderUnitario,inventario:renderInventario,gastos:renderGastos};
+  var fn={resumen:renderResumen,lineas:renderLineas,productos:renderProductos,pricing:renderPricing,alertas:renderAlertas,simulador:renderSimulador,unitario:renderUnitario,cotizador:renderCotizador,inventario:renderInventario,gastos:renderGastos};
   if(fn[currentTab])fn[currentTab]();
 }
 
@@ -514,8 +518,303 @@ function exportPricingPDF(){
   doc.save('VIVALCE_Lista_Precios_'+new Date().toISOString().slice(0,10)+'.pdf');
 }
 
+
+
+// ===== TAB: COTIZADOR =====
+function renderCotizador(){
+  var cs = window._cotState;
+  var lineSet = {}; for(var i=0;i<P.length;i++) lineSet[P[i].l]=1;
+  var lks = Object.keys(lineSet).sort();
+  
+  var h = '<div class="card full"><h3>💰 Cotizador — Volumen Incremental</h3>';
+  h += '<p style="color:var(--t2);font-size:11px;margin-bottom:14px">Coticá un cliente nuevo considerando el efecto de absorción de gastos fijos. Más volumen → menor GF/kg → mejor margen.</p>';
+  
+  h += '<div style="border-bottom:1px solid var(--bd);padding-bottom:14px;margin-bottom:14px">';
+  h += '<div style="font-weight:600;color:var(--ac);margin-bottom:8px;font-size:12px">1️⃣ Producto a cotizar</div>';
+  h += '<div style="display:flex;gap:8px;margin-bottom:8px">';
+  h += '<select id="cot-linea" onchange="cotDoFiltro()" style="background:var(--s1);border:1px solid var(--bd);color:var(--tx);padding:5px 8px;border-radius:6px;font-size:11px">';
+  h += '<option value="ALL"'+(cs.lineaFiltro==='ALL'?' selected':'')+'>Todos los proveedores</option>';
+  lks.forEach(function(l){ h += '<option value="'+l+'"'+(cs.lineaFiltro===l?' selected':'')+'>'+l+'</option>'; });
+  h += '</select>';
+  h += '<input id="cot-busc" placeholder="Buscar producto..." value="'+cs.busqueda+'" oninput="cotDoFiltro()" style="background:var(--s1);border:1px solid var(--bd);color:var(--tx);padding:5px 8px;border-radius:6px;font-size:11px;flex:1">';
+  h += '</div>';
+  h += '<div id="cot-lista" style="max-height:180px;overflow-y:auto;border:1px solid var(--bd);border-radius:6px"></div>';
+  h += '</div>';
+  
+  h += '<div id="cot-escenario" style="display:none">';
+  h += '<div style="font-weight:600;color:var(--ac);margin-bottom:8px;font-size:12px">2️⃣ Escenario del cliente</div>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:10px">';
+  h += '<div><label style="font-size:11px;color:var(--t2)">Volumen del cliente (kg/mes)</label><br>';
+  h += '<div style="display:flex;gap:6px;align-items:center"><input type="number" id="cot-vol" min="0" max="50000" step="100" value="'+cs.volMensual+'" oninput="cotCalcular()" style="background:var(--s1);border:1px solid var(--bd);color:var(--tx);padding:4px 6px;border-radius:6px;width:90px;font-size:11px">';
+  h += '<input type="range" id="cot-vol-range" min="0" max="20000" step="100" value="'+cs.volMensual+'" oninput="cotVolFromRange()" style="flex:1"></div></div>';
+  h += '<div><label style="font-size:11px;color:var(--t2)">Precio que cotizás (USD/kg)</label><br>';
+  h += '<div style="display:flex;gap:6px;align-items:center"><input type="number" id="cot-precio" min="0" step="0.01" value="'+cs.precio.toFixed(2)+'" oninput="cotCalcular()" style="background:var(--s1);border:1px solid var(--bd);color:var(--tx);padding:4px 6px;border-radius:6px;width:90px;font-size:11px">';
+  h += '<input type="range" id="cot-precio-range" min="0" step="0.01" value="'+cs.precio+'" oninput="cotPrecioFromRange()" style="flex:1"></div></div>';
+  h += '</div>';
+  h += '<div style="background:rgba(0,212,170,0.08);border-left:3px solid var(--gn);padding:10px;border-radius:4px;font-size:11px;margin-bottom:14px" id="cot-info-abs"></div>';
+  h += '</div>';
+  
+  h += '<div id="cot-secciones"></div>';
+  
+  h += '<div id="cot-botones" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--bd);gap:8px">';
+  h += '<button onclick="cotExportPDF()" class="btn-load" style="padding:6px 14px;font-size:11px">📄 Exportar PDF</button> ';
+  h += '<button onclick="cotExportExcel()" class="btn-load" style="padding:6px 14px;font-size:11px">📊 Exportar Excel</button> ';
+  h += '<button onclick="cotReset()" class="btn-load" style="padding:6px 14px;font-size:11px;background:rgba(255,77,106,0.15);color:var(--rd)">🔄 Reset</button>';
+  h += '</div>';
+  
+  h += '</div>';
+  document.getElementById('content').innerHTML = h;
+  cotDoFiltro();
+  if(cs.productoP_idx >= 0) cotCalcular();
+}
+
+function cotDoFiltro(){
+  var cs = window._cotState;
+  cs.lineaFiltro = document.getElementById('cot-linea').value;
+  cs.busqueda = document.getElementById('cot-busc').value.toLowerCase();
+  
+  var lista = '<table style="font-size:11px;width:100%"><thead><tr><th></th><th>Proveedor</th><th>Producto</th><th style="text-align:right">PV actual</th><th style="text-align:right">DDP</th><th>Estado</th></tr></thead><tbody>';
+  
+  for(var i=0;i<P.length;i++){
+    var p = P[i];
+    if(cs.lineaFiltro !== 'ALL' && p.l !== cs.lineaFiltro) continue;
+    if(cs.busqueda && (p.p+' '+p.l).toLowerCase().indexOf(cs.busqueda) === -1) continue;
+    
+    var sinDDP = (p.mp === null || p.mp === undefined);
+    var ddpCalc = sinDDP ? null : p.mp * (1 + (p.nac||0));
+    var marker = (i === cs.productoP_idx) ? '▶' : '';
+    var rowStyle = (i === cs.productoP_idx) ? 'background:rgba(79,140,255,0.15)' : '';
+    
+    if(sinDDP){
+      lista += '<tr style="opacity:0.45;cursor:not-allowed" title="Producto sin %nac definido. No se puede cotizar hasta que Compras complete el dato en DDP ESTANDAR."><td style="width:18px"></td><td style="font-size:10px;color:var(--t2)">'+p.l+'</td><td>'+p.p+'</td><td class="mono" style="text-align:right">'+fd(p.pv)+'</td><td class="mono" style="text-align:right;color:var(--t2)">s/d</td><td><span style="color:#ffa500;font-size:10px">⚠ Sin DDP</span></td></tr>';
+    } else {
+      lista += '<tr style="cursor:pointer;'+rowStyle+'" onclick="cotSelectProduct('+i+')"><td style="width:18px;color:var(--ac);font-weight:bold">'+marker+'</td><td style="font-size:10px;color:var(--t2)">'+p.l+'</td><td>'+p.p+'</td><td class="mono" style="text-align:right">'+fd(p.pv)+'</td><td class="mono" style="text-align:right">'+fd(ddpCalc)+'</td><td><span style="color:var(--gn);font-size:10px">✓ OK</span></td></tr>';
+    }
+  }
+  lista += '</tbody></table>';
+  document.getElementById('cot-lista').innerHTML = lista;
+}
+
+function cotSelectProduct(idx){
+  var cs = window._cotState;
+  cs.productoP_idx = idx;
+  var p = P[idx];
+  if(cs.precio === 0) cs.precio = p.pv;
+  cotDoFiltro();
+  cotInicializar();
+}
+
+function cotInicializar(){
+  var cs = window._cotState;
+  document.getElementById('cot-escenario').style.display = 'block';
+  document.getElementById('cot-botones').style.display = 'flex';
+  var p = P[cs.productoP_idx];
+  var rg = document.getElementById('cot-precio-range');
+  if(rg){ rg.max = (p.pv * 2).toFixed(2); rg.value = cs.precio; }
+  document.getElementById('cot-precio').value = cs.precio.toFixed(2);
+  cotCalcular();
+}
+
+function cotVolFromRange(){
+  var v = document.getElementById('cot-vol-range').value;
+  document.getElementById('cot-vol').value = v;
+  window._cotState.volMensual = parseFloat(v) || 0;
+  cotCalcular();
+}
+
+function cotPrecioFromRange(){
+  var v = document.getElementById('cot-precio-range').value;
+  document.getElementById('cot-precio').value = parseFloat(v).toFixed(2);
+  window._cotState.precio = parseFloat(v) || 0;
+  cotCalcular();
+}
+
+function cotCalcular(){
+  var cs = window._cotState;
+  if(cs.productoP_idx < 0) return;
+  var p = P[cs.productoP_idx];
+  if(p.mp === null || p.mp === undefined) return;
+  
+  cs.volMensual = parseFloat(document.getElementById('cot-vol').value) || 0;
+  cs.precio = parseFloat(document.getElementById('cot-precio').value) || 0;
+  var pr = document.getElementById('cot-precio-range');
+  if(pr){ pr.max = (p.pv * 2).toFixed(2); pr.value = cs.precio; }
+  var vr = document.getElementById('cot-vol-range');
+  if(vr) vr.value = cs.volMensual;
+  
+  var ddp = p.mp * (1 + (p.nac || 0));
+  var r = p.r || 1;
+  var mod = gp('pMOD');
+  var fl = gp('pFL');
+  var impPct = gp('pIMP')/100;
+  var impF = gp('pIMPF') || 0;
+  var GF_actual = gp('pGF');
+  
+  var costoBase = ddp/r + mod + fl;
+  
+  var volActual = getVolMensualReal();
+  var GF_totalUSD = GF_actual * volActual;
+  var volNuevo = volActual + cs.volMensual;
+  var GF_nuevo = volNuevo > 0 ? GF_totalUSD / volNuevo : GF_actual;
+  
+  function calcEbitda(pp){
+    var imp_pp = pp * impPct + impF;
+    return pp - costoBase - imp_pp - GF_nuevo;
+  }
+  
+  var pCMG15 = (costoBase + impF) / (1 - impPct - 0.15);
+  var pBE = (costoBase + impF + GF_nuevo) / (1 - impPct);
+  var p20 = pBE * 1.20;
+  var p30 = pBE * 1.30;
+  var p40 = pBE * 1.40;
+  
+  function ebMensual(pp){ return calcEbitda(pp) * cs.volMensual; }
+  function ebAnual(pp){ return ebMensual(pp) * 12; }
+  
+  var ahorroGF = GF_actual - GF_nuevo;
+  var infoH = '<strong>Volumen actual empresa:</strong> '+fmt(volActual)+' kg/mes → <strong>Nuevo total:</strong> '+fmt(volNuevo)+' kg/mes ';
+  infoH += '(<span style="color:var(--gn)">+'+((cs.volMensual/volActual)*100).toFixed(1)+'%</span>)';
+  infoH += '<br><strong>GF/kg actual:</strong> USD '+GF_actual.toFixed(4)+' → <strong>GF/kg con cliente:</strong> USD '+GF_nuevo.toFixed(4);
+  infoH += ' (<span style="color:var(--gn)">ahorro USD '+ahorroGF.toFixed(4)+'/kg</span>)';
+  document.getElementById('cot-info-abs').innerHTML = infoH;
+  
+  var h = '';
+  h += '<div style="border-bottom:1px solid var(--bd);padding-bottom:14px;margin-bottom:14px">';
+  h += '<div style="font-weight:600;color:var(--ac);margin-bottom:8px;font-size:12px">3️⃣ Escenarios de precio (incluyendo absorción del cliente nuevo)</div>';
+  h += '<table style="font-size:11px;width:100%"><thead><tr><th>Escenario</th><th style="text-align:right">Precio (USD/kg)</th><th style="text-align:right">EBITDA (USD/kg)</th><th style="text-align:right">EBITDA mensual</th><th style="text-align:right">EBITDA anual</th></tr></thead><tbody>';
+  
+  var escenarios = [
+    {nombre:'CMG 15%', precio:pCMG15, color:'var(--ac)', bg:'rgba(79,140,255,0.08)'},
+    {nombre:'Breakeven', precio:pBE, color:'var(--or)', bg:'rgba(255,184,77,0.10)'},
+    {nombre:'+20% sobre BE', precio:p20, color:'var(--gn)', bg:'rgba(0,212,170,0.10)'},
+    {nombre:'+30% sobre BE', precio:p30, color:'var(--gn)', bg:'rgba(0,212,170,0.12)'},
+    {nombre:'+40% sobre BE', precio:p40, color:'var(--gn)', bg:'rgba(0,212,170,0.14)'}
+  ];
+  escenarios.forEach(function(e){
+    h += '<tr style="background:'+e.bg+'"><td style="color:'+e.color+';font-weight:600">'+e.nombre+'</td>';
+    h += '<td class="mono" style="text-align:right">'+fd(e.precio)+'</td>';
+    h += '<td class="mono" style="text-align:right">'+fd(calcEbitda(e.precio))+'</td>';
+    h += '<td class="mono" style="text-align:right">'+fmt(ebMensual(e.precio))+'</td>';
+    h += '<td class="mono" style="text-align:right">'+fmt(ebAnual(e.precio))+'</td></tr>';
+  });
+  h += '<tr style="background:rgba(79,140,255,0.25);border:2px solid var(--ac)"><td style="color:var(--ac);font-weight:bold">🎯 Tu cotización</td>';
+  h += '<td class="mono" style="text-align:right;font-weight:bold">'+fd(cs.precio)+'</td>';
+  h += '<td class="mono" style="text-align:right;font-weight:bold">'+fd(calcEbitda(cs.precio))+'</td>';
+  h += '<td class="mono" style="text-align:right;font-weight:bold">'+fmt(ebMensual(cs.precio))+'</td>';
+  h += '<td class="mono" style="text-align:right;font-weight:bold">'+fmt(ebAnual(cs.precio))+'</td></tr>';
+  h += '</tbody></table>';
+  
+  var msg = '', msgColor = '';
+  if(cs.precio < pBE){ msg = '🔴 Estás por debajo del breakeven — perdés plata con cada kg'; msgColor = 'var(--rd)'; }
+  else if(cs.precio < p20){ msg = '🟠 Zona ajustada — apenas cubrís costos, margen débil'; msgColor = 'var(--or)'; }
+  else if(cs.precio < p40){ msg = '🟢 Zona saludable — margen razonable para el negocio'; msgColor = 'var(--gn)'; }
+  else { msg = '✨ Excelente margen — la cotización tiene buen colchón'; msgColor = 'var(--gn)'; }
+  h += '<div style="margin-top:8px;padding:8px 12px;background:rgba(0,0,0,0.2);border-left:3px solid '+msgColor+';color:'+msgColor+';font-size:11px;font-weight:600">'+msg+'</div>';
+  h += '</div>';
+  
+  var ebActual = 0, revActual = 0;
+  for(var j=0;j<P.length;j++){
+    var pp = P[j];
+    if(pp.mp === null || pp.v === 0) continue;
+    var ddp_j = pp.mp * (1 + (pp.nac||0));
+    var costoBase_j = ddp_j/(pp.r||1) + mod + fl;
+    var imp_j = pp.pv * impPct + impF;
+    var cmg_j = pp.pv - costoBase_j - imp_j;
+    ebActual += (cmg_j - GF_actual) * pp.v;
+    revActual += pp.pv * pp.v;
+  }
+  var ebConCliente = 0;
+  for(var j=0;j<P.length;j++){
+    var pp = P[j];
+    if(pp.mp === null || pp.v === 0) continue;
+    var ddp_j = pp.mp * (1 + (pp.nac||0));
+    var costoBase_j = ddp_j/(pp.r||1) + mod + fl;
+    var imp_j = pp.pv * impPct + impF;
+    var cmg_j = pp.pv - costoBase_j - imp_j;
+    ebConCliente += (cmg_j - GF_nuevo) * pp.v;
+  }
+  ebConCliente += ebAnual(cs.precio);
+  var revConCliente = revActual + cs.precio * cs.volMensual * 12;
+  var deltaEbitda = ebConCliente - ebActual;
+  
+  h += '<div style="border-bottom:1px solid var(--bd);padding-bottom:14px;margin-bottom:14px">';
+  h += '<div style="font-weight:600;color:var(--ac);margin-bottom:8px;font-size:12px">4️⃣ Impacto en negocio total</div>';
+  h += '<table style="font-size:11px;width:100%"><thead><tr><th></th><th style="text-align:right">Sin cliente</th><th style="text-align:right">Con cliente</th><th style="text-align:right">Diferencia</th></tr></thead><tbody>';
+  h += '<tr><td>Revenue anual</td><td class="mono" style="text-align:right">USD '+fmt(revActual)+'</td><td class="mono" style="text-align:right">USD '+fmt(revConCliente)+'</td><td class="mono" style="text-align:right;color:var(--gn)">+USD '+fmt(revConCliente-revActual)+'</td></tr>';
+  var deltaColor = deltaEbitda > 0 ? 'var(--gn)' : 'var(--rd)';
+  h += '<tr><td>EBITDA anual</td><td class="mono" style="text-align:right">USD '+fmt(ebActual)+'</td><td class="mono" style="text-align:right">USD '+fmt(ebConCliente)+'</td><td class="mono" style="text-align:right;color:'+deltaColor+'">'+(deltaEbitda>=0?'+':'')+'USD '+fmt(deltaEbitda)+'</td></tr>';
+  h += '</tbody></table>';
+  var verbo = deltaEbitda > 0 ? '✅ <strong>MEJORA</strong>' : '❌ <strong>EMPEORA</strong>';
+  h += '<div style="margin-top:8px;padding:8px 12px;background:rgba(0,0,0,0.2);border-left:3px solid '+deltaColor+';font-size:11px">Tomar este cliente '+verbo+' el EBITDA total en <strong style="color:'+deltaColor+'">USD '+fmt(Math.abs(deltaEbitda))+'</strong> anuales</div>';
+  h += '</div>';
+  
+  var GF_meta_max = cs.precio*(1-impPct) - costoBase - impF;
+  h += '<div style="margin-bottom:0">';
+  h += '<div style="font-weight:600;color:var(--ac);margin-bottom:8px;font-size:12px">5️⃣ Punto de quiebre</div>';
+  if(GF_meta_max <= 0){
+    h += '<div style="padding:10px;background:rgba(255,77,106,0.10);border-left:3px solid var(--rd);font-size:11px;color:var(--rd)">⚠ Al precio USD '+fd(cs.precio)+' no se cubre el costo base aun con volumen infinito. Subir el precio o bajar costos.</div>';
+  } else {
+    var volMensualMinimo = GF_totalUSD / GF_meta_max;
+    var volClienteMinimo = volMensualMinimo - volActual;
+    if(volClienteMinimo <= 0){
+      h += '<div style="padding:10px;background:rgba(0,212,170,0.10);border-left:3px solid var(--gn);font-size:11px;color:var(--gn)">✓ Al precio USD '+fd(cs.precio)+', el volumen actual ya cubre el breakeven. Cualquier kg del cliente es ganancia.</div>';
+    } else {
+      var cumple = cs.volMensual >= volClienteMinimo;
+      var col = cumple ? 'var(--gn)' : 'var(--or)';
+      h += '<div style="padding:10px;background:rgba(0,0,0,0.2);border-left:3px solid '+col+';font-size:11px">';
+      h += 'Al precio <strong>USD '+fd(cs.precio)+'</strong>, el cliente debe comprar al menos <strong style="color:'+col+'">'+fmt(volClienteMinimo)+' kg/mes</strong> para que valga la pena.<br>';
+      h += 'Tu cotización es de '+fmt(cs.volMensual)+' kg/mes → ';
+      h += cumple ? '<strong style="color:var(--gn)">✓ Supera el mínimo</strong>' : '<strong style="color:var(--or)">⚠ Falta volumen: '+fmt(volClienteMinimo - cs.volMensual)+' kg/mes</strong>';
+      h += '</div>';
+    }
+  }
+  h += '</div>';
+  
+  document.getElementById('cot-secciones').innerHTML = h;
+}
+
+function cotReset(){
+  window._cotState = {productoP_idx: -1, volMensual: 1000, precio: 0, lineaFiltro: 'ALL', busqueda: ''};
+  renderCotizador();
+}
+
+function cotExportPDF(){
+  alert('Se abrirá la ventana de impresión. Elegí "Guardar como PDF" en el destino.');
+  window.print();
+}
+
+function cotExportExcel(){
+  var cs = window._cotState;
+  if(cs.productoP_idx < 0){ alert('Seleccioná un producto primero.'); return; }
+  var p = P[cs.productoP_idx];
+  var ddp = p.mp * (1 + (p.nac || 0));
+  var r = p.r || 1;
+  var mod = gp('pMOD'), fl = gp('pFL');
+  var impPct = gp('pIMP')/100, impF = gp('pIMPF')||0;
+  var GF_actual = gp('pGF');
+  var costoBase = ddp/r + mod + fl;
+  var volActual = getVolMensualReal();
+  var GF_totalUSD = GF_actual * volActual;
+  var GF_nuevo = GF_totalUSD / (volActual + cs.volMensual);
+  function calcE(pp){ return pp - costoBase - pp*impPct - impF - GF_nuevo; }
+  var pCMG15 = (costoBase + impF) / (1 - impPct - 0.15);
+  var pBE = (costoBase + impF + GF_nuevo) / (1 - impPct);
+  var csv = '\uFEFFEscenario,Precio USD/kg,EBITDA USD/kg,EBITDA mensual,EBITDA anual\n';
+  var rows = [['CMG 15%',pCMG15],['Breakeven',pBE],['+20% sobre BE',pBE*1.20],['+30% sobre BE',pBE*1.30],['+40% sobre BE',pBE*1.40],['Tu cotizacion',cs.precio]];
+  rows.forEach(function(rr){
+    var pp = rr[1], ek = calcE(pp), em = ek*cs.volMensual, ea = em*12;
+    csv += rr[0]+','+pp.toFixed(4)+','+ek.toFixed(4)+','+em.toFixed(2)+','+ea.toFixed(2)+'\n';
+  });
+  var blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'VIVALCE_Cotizacion_'+p.p.replace(/[^a-zA-Z0-9]/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+
 // ===== INIT =====
 syncVolDisplay();renderTabs();renderContent();
 </script>
 </body>
-</html><!-- cache-bust: 1779247928 -->
+</html><!-- cache-bust: 1779248265 -->
