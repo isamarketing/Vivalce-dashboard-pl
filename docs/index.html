@@ -369,13 +369,15 @@ function renderGastos(){
   G.forEach(function(g,i){var cf=g.costo_final,a=GA[i];var sum=a.cdir_r+a.fijo_r+a.logis_r+a.back_r+a.cdir_v+a.fijo_v+a.logis_v+a.back_v;r.cdir+=cf*a.cdir_r;r.fijo+=cf*a.fijo_r;r.logis+=cf*a.logis_r;r.back+=cf*a.back_r;v.cdir+=cf*a.cdir_v;v.fijo+=cf*a.fijo_v;v.logis+=cf*a.logis_v;v.back+=cf*a.back_v;totalCost+=cf;if(Math.abs(sum)<.01&&cf!==0)unassigned++;});
   r.total=r.cdir+r.fijo+r.logis+r.back;v.total=v.cdir+v.fijo+v.logis+v.back;
   var rPerKg=Math.abs(r.total)/tc/volR;var vPerKg=Math.abs(v.total)/tc/volV;
-  // Auto-update P&L params
+  // Auto-update P&L params (con guard: NO escribir ceros si no hay asignación válida)
   var newGF=(Math.abs(r.fijo)+Math.abs(r.back))/tc/volR;
   var newMOD=(Math.abs(r.cdir)+Math.abs(r.logis))/tc/volR;
-  document.getElementById('pGF').value=newGF.toFixed(4);
-  document.getElementById('pMOD').value=newMOD.toFixed(4);
-  if(document.getElementById('pGFdisplay'))document.getElementById('pGFdisplay').textContent=newGF.toFixed(4);
-  if(document.getElementById('pMODdisplay'))document.getElementById('pMODdisplay').textContent=newMOD.toFixed(4);
+  if(G.length>0 && Math.abs(totalCost)>0 && newGF>0 && newMOD>0){
+    document.getElementById('pGF').value=newGF.toFixed(4);
+    document.getElementById('pMOD').value=newMOD.toFixed(4);
+    if(document.getElementById('pGFdisplay'))document.getElementById('pGFdisplay').textContent=newGF.toFixed(4);
+    if(document.getElementById('pMODdisplay'))document.getElementById('pMODdisplay').textContent=newMOD.toFixed(4);
+  }
 
   var fmtG=function(n){return Math.abs(n).toLocaleString('es-AR',{maximumFractionDigits:0})};
   var h='<div class="kpis" style="grid-template-columns:repeat(6,1fr)">';
@@ -385,7 +387,11 @@ function renderGastos(){
   h+='<div class="kpi"><div class="lb">USD/kg RECSA</div><div class="vl" style="color:var(--ac)">USD '+rPerKg.toFixed(2)+'</div></div>';
   h+='<div class="kpi"><div class="lb">USD/kg VIVALCE</div><div class="vl" style="color:var(--gn)">USD '+vPerKg.toFixed(2)+'</div></div>';
   h+='<div class="kpi"><div class="lb">Sin Asignar</div><div class="vl" style="color:'+(unassigned>0?'var(--rd)':'var(--gn)')+'">'+unassigned+'</div></div></div>';
-  h+='<div style="padding:8px 0;font-size:11px;color:var(--gn)">✅ GF y MOD del P&L actualizados automáticamente — GF: USD '+newGF.toFixed(4)+'/kg · MOD: USD '+newMOD.toFixed(4)+'/kg</div>';
+  if(newGF>0 && newMOD>0){
+    h+='<div style="padding:8px 0;font-size:11px;color:var(--gn)">✅ GF y MOD del P&L actualizados automáticamente — GF: USD '+newGF.toFixed(4)+'/kg · MOD: USD '+newMOD.toFixed(4)+'/kg</div>';
+  }else{
+    h+='<div style="padding:8px 0;font-size:11px;color:var(--or)">⚠ Asignación incompleta — los valores GF y MOD del P&L NO se actualizaron (asignar los gastos primero)</div>';
+  }
   h+='<div class="card full"><h3>Asignación por Gasto</h3><div style="margin-bottom:8px;display:flex;gap:8px"><select id="g-emp" onchange="renderGTbl()" style="background:var(--s1);border:1px solid var(--bd);color:var(--tx);padding:4px 8px;border-radius:6px;font-size:11px"><option value="ALL">Todas</option><option value="RECSA">RECSA</option><option value="VIVALCE">VIVALCE</option></select><input id="g-s" placeholder="Buscar..." oninput="renderGTbl()" style="background:var(--s1);border:1px solid var(--bd);color:var(--tx);padding:4px 8px;border-radius:6px;font-size:11px;flex:1"></div>';
   h+='<div id="g-tbl" style="max-height:calc(100vh - 380px);overflow-y:auto"></div></div>';
   document.getElementById("content").innerHTML=h;renderGTbl();
@@ -491,4 +497,4 @@ function exportPricingPDF(){
 renderTabs();renderContent();
 </script>
 </body>
-</html><!-- cache-bust: 1779105975 -->
+</html><!-- cache-bust: 1779233497 -->
