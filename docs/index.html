@@ -235,7 +235,8 @@ function renderContent(){
 // ===== TAB: RESUMEN =====
 function renderResumen(){
   var all=calcAllPL();var t=totalsPL(all);var Gr=gv();var gf=Gr.gf+Gr.bo;
-  var h='<div class="kpis">';
+  var h='<div style="margin-bottom:12px;display:flex;justify-content:flex-end"><button onclick="exportPL()" style="background:#1F7A4E;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">📊 Exportar a Excel</button></div>';
+  h+='<div class="kpis">';
   h+='<div class="kpi"><div class="lb">Revenue Anual</div><div class="vl">USD '+fmt(t.rev)+'</div><div class="delta">'+t.n+' productos</div></div>';
   h+='<div class="kpi"><div class="lb">CMG Anual</div><div class="vl" style="color:'+(t.cmg>=0?'var(--gn)':'var(--rd)')+'">USD '+fmt(t.cmg)+'</div><div class="delta">'+t.cmgMargin+'%</div></div>';
   h+='<div class="kpi"><div class="lb">EBITDA Anual</div><div class="vl" style="color:'+(t.ebitda>=0?'var(--gn)':'var(--rd)')+'">USD '+(t.ebitda<0?'-':'')+fmt(t.ebitda)+'</div><div class="delta" style="color:'+(t.ebitda>=0?'var(--gn)':'var(--rd)')+'">'+t.margin+'%</div></div>';
@@ -965,8 +966,112 @@ function cotExportExcel(){
 }
 
 
+
+// ===== EXPORTAR A EXCEL =====
+function exportPL(){
+  var all=calcAllPL();
+  var Gr=gv();
+  var tc=gp('pTC');
+  var fechaExp=new Date().toLocaleDateString('es-AR');
+  
+  // Construir filas
+  var rows=[];
+  // Header
+  rows.push([
+    'Linea','Producto','Familia','Origen',
+    'Precio USD/kg','FOB USD/kg','% Nac','Rendimiento','DDP USD/kg',
+    'Costo Dir USD/kg','Imp Dir USD/kg','Flete USD/kg',
+    'CMG USD/kg','CMG %','Fijos+Back USD/kg','EBITDA USD/kg','EBITDA %',
+    'Volumen anual kg','Revenue anual USD','EBITDA anual USD','Status'
+  ]);
+  
+  // Ordenar productos: con DDP primero (por revenue desc), luego sin DDP
+  var sorted=all.slice().sort(function(a,b){
+    if(a.sinDDP&&!b.sinDDP)return 1;
+    if(!a.sinDDP&&b.sinDDP)return -1;
+    return (b.rev||0)-(a.rev||0);
+  });
+  
+  for(var i=0;i<sorted.length;i++){
+    var c=sorted[i];
+    var p=P.find(function(x){return x.p===c.p;});
+    var ddp=c.sinDDP?null:getDDP(c)/c.r;
+    var impDir=c.sinDDP?null:c.pv*(gp('pIMP')/100);
+    var fijosBack=Gr.gf+Gr.bo;
+    var status=c.sinDDP?'s/d': (c.ebitda>0?(c.ebitdaPct>0.1?'OK':'BORDE'):'PIERDE');
+    
+    rows.push([
+      c.l||'',
+      c.p||'',
+      c.f||'Sin clasificar',
+      p&&p.o||'',
+      c.pv||0,
+      c.sinDDP?null:p.mp,
+      c.sinDDP?null:(p.nac||0),
+      p&&p.r||1,
+      ddp,
+      c.sinDDP?null:Gr.cd,
+      impDir,
+      c.sinDDP?null:gp('pFL'),
+      c.cmg,
+      c.cmgPct,
+      fijosBack,
+      c.ebitda,
+      c.ebitdaPct,
+      c.v||0,
+      c.rev,
+      c.ebitdaAbs,
+      status
+    ]);
+  }
+  
+  // Crear worksheet y workbook
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+  
+  // Anchos de columna
+  ws['!cols']=[
+    {wch:24},{wch:28},{wch:22},{wch:8},
+    {wch:12},{wch:11},{wch:8},{wch:11},{wch:12},
+    {wch:14},{wch:12},{wch:12},
+    {wch:12},{wch:10},{wch:16},{wch:14},{wch:10},
+    {wch:14},{wch:16},{wch:16},{wch:10}
+  ];
+  
+  // Formato de números: % para columnas N (cmgPct) y Q (ebitdaPct); USD para precios; entero para volumen
+  // Aplicar formato fila por fila (excepto el header)
+  for(var r=1;r<rows.length;r++){
+    // Porcentajes (cols N=14, Q=17 1-based; en sheetjs son 13 y 16 0-based)
+    var pctCols=[13,16]; // CMG% y EBITDA%
+    pctCols.forEach(function(c){
+      var cell=ws[XLSX.utils.encode_cell({r:r,c:c})];
+      if(cell&&typeof cell.v==='number') cell.z='0.0%';
+    });
+    // Volumen entero
+    var volCell=ws[XLSX.utils.encode_cell({r:r,c:17})];
+    if(volCell&&typeof volCell.v==='number') volCell.z='#,##0';
+    // Revenue y EBITDA totales
+    [18,19].forEach(function(c){
+      var cell=ws[XLSX.utils.encode_cell({r:r,c:c})];
+      if(cell&&typeof cell.v==='number') cell.z='#,##0';
+    });
+    // Precios y costos USD con 2-4 decimales
+    [4,5,8,9,10,11,12,14,15].forEach(function(c){
+      var cell=ws[XLSX.utils.encode_cell({r:r,c:c})];
+      if(cell&&typeof cell.v==='number') cell.z='0.0000';
+    });
+  }
+  
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'P&L Detallado');
+  
+  // Nombre con fecha
+  var d=new Date();
+  var fname='VIVALCE_PL_'+d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'.xlsx';
+  XLSX.writeFile(wb,fname);
+}
+
 // ===== INIT =====
 syncVolDisplay();syncGastosHeader();renderTabs();renderContent();
 </script>
 </body>
-</html><!-- cache-bust: 1781021344 -->
+</html><!-- cache-bust: 1781024062 -->
