@@ -73,14 +73,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
 <body>
 <div class="header">
   <div><h1><span>VIVALCE</span> — Dashboard Integral P&L</h1><div class="sub">Pérdidas & Ganancias · Asignación de Gastos · Costo Inventario · <span id="dataSource" style="color:var(--ac)">Datos base</span></div></div>
-  <div style="display:flex;gap:8px;align-items:center">
-    <label class="btn-load" onclick="document.getElementById('fileIn').click()">📂 Excel Master</label>
-    <input type="file" id="fileIn" accept=".xlsx,.xls" style="display:none" onchange="loadMaster(this.files[0])">
-    <button class="btn-sm" onclick="exportCSV()">📥 CSV</button>
-  </div>
+  <div></div>
 </div>
 <div class="params-bar">
-  <div><label>TC USD/ARS</label><br><div style="padding:4px 0;font-family:ui-monospace,monospace;font-size:13px;color:var(--tx)"><span id="pTCDisplay">1.490</span><br><span style="font-size:9px;color:var(--t2)">← Master</span></div><input type="hidden" id="pTC" value="1490"></div>
+  <div><label>TC USD/ARS</label><br><div style="padding:4px 0;font-family:ui-monospace,monospace;font-size:13px;color:var(--tx)"><span id="pTCDisplay">1.450</span><br><span style="font-size:9px;color:var(--t2)">← Master</span></div><input type="hidden" id="pTC" value="1450"></div>
   <div><label>Vol Mensual kg</label><br><div style="padding:4px 0;font-family:ui-monospace,monospace;font-size:13px;color:var(--tx)"><span id="pVolDisplay">16.611</span><br><span style="font-size:9px;color:var(--t2)">← Suma productos / 12</span></div><input type="hidden" id="pVol" value="16611"></div>
   <div><label>Flete USD/kg</label><br><div style="padding:4px 0;font-family:ui-monospace,monospace;font-size:13px;color:var(--tx)"><span id="pFLDisplay">0.20</span><br><span style="font-size:9px;color:var(--t2)">← Master</span></div><input type="hidden" id="pFL" value="0.20"></div>
   <div><label>Imp. Directos %</label><br><div style="padding:4px 0;font-family:ui-monospace,monospace;font-size:13px;color:var(--tx)"><span id="pIMPDisplay">4.7%</span><br><span style="font-size:9px;color:var(--t2)">ITF + IIBB</span></div><input type="hidden" id="pIMP" value="4.7"></div>
@@ -1074,4 +1070,4 @@ function exportPL(){
 syncVolDisplay();syncGastosHeader();renderTabs();renderContent();
 </script>
 </body>
-</html><!-- cache-bust: 1781024062 -->
+</html><!-- cache-bust: 1781027547 -->
