@@ -203,7 +203,7 @@ function calcPL(p){
   var rev=pv*p.v;
   var ebitdaAbs=ebitda*p.v;
   var cmgAbs=cmg*p.v;
-  return {pv:pv,mp:mp,r:r,mod:mod,imp:imp,fl:fl,nac:nac,cmg:cmg,cmgPct:cmgPct,gf:gf,ebitda:ebitda,ebitdaPct:ebitdaPct,am:am,ebit:ebit,ifin:ifin,cfi:cfi,rai:rai,rev:rev,ebitdaAbs:ebitdaAbs,cmgAbs:cmgAbs,v:p.v,l:p.l,p:p.p,o:p.o,lt:p.lt,ss:p.ss,sinDDP:false};
+  return {pv:pv,mp:mp,r:r,mod:mod,imp:imp,fl:fl,nac:nac,cmg:cmg,cmgPct:cmgPct,gf:gf,ebitda:ebitda,ebitdaPct:ebitdaPct,am:am,ebit:ebit,ifin:ifin,cfi:cfi,rai:rai,rev:rev,ebitdaAbs:ebitdaAbs,cmgAbs:cmgAbs,v:p.v,l:p.l,p:p.p,o:p.o,lt:p.lt,ss:p.ss,sinDDP:false,mkG:p.mkG,mkH:p.mkH,mkI:p.mkI,mkJ:p.mkJ,mkK:p.mkK};
 }function calcAllPL(){var r=[];for(var i=0;i<P.length;i++)r.push(calcPL(P[i]));return r;}
 function totalsPL(items){var rev=0,ebitda=0,cmg=0,vol=0,np=0,nn=0;for(var i=0;i<items.length;i++){var c=items[i];if(c.sinDDP){continue;}rev+=c.rev;ebitda+=c.ebitdaAbs;cmg+=c.cmgAbs;vol+=c.v;if(c.ebitda>0)np++;else nn++;}return{rev:rev,ebitda:ebitda,cmg:cmg,vol:vol,margin:rev>0?(ebitda/rev*100).toFixed(1):'0',cmgMargin:rev>0?(cmg/rev*100).toFixed(1):'0',n:items.length,np:np,nn:nn};}
 
