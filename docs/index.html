@@ -229,29 +229,31 @@ function renderContent(){
 
 // ===== TAB: RESUMEN =====
 function renderResumen(){
-  var all=calcAllPL();var t=totalsPL(all);var Gr=gv();var gf=Gr.gf+Gr.bo;
-  var h='<div style="margin-bottom:12px;display:flex;justify-content:flex-end"><button onclick="exportPL()" style="background:#1F7A4E;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">📊 Exportar a Excel</button></div>';
+  var all=calcAllPL();
+  // Base ACUMULADO 2026 (Ene-Jun): revenue/EBITDA/CMG/vol sobre y26 en lugar de ano movil
+  var allY=all.map(function(c,i){var y=P[i].y26||0;var f=P[i].f26||0;var costK=c.pv-c.ebitda;var cmgCostK=c.pv-c.cmg;var eAbs=f-costK*y;var cAbs=f-cmgCostK*y;var o={};for(var k in c)o[k]=c[k];o.v=y;o.rev=f;o.ebitdaAbs=eAbs;o.cmgAbs=cAbs;o.ebitda=(y>0?eAbs/y:0);o.cmg=(y>0?cAbs/y:0);o.ebitdaPct=(f>0?eAbs/f*100:0);return o;});
+  var t=totalsPL(allY);var Gr=gv();var gf=Gr.gf+Gr.bo;
+  var h='<div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:var(--t2)">P&L sobre <strong>acumulado 2026 (Ene\u2013Jun)</strong> \u2014 volumen real facturado del a\u00f1o corriente</span><button onclick="exportPL()" style="background:#1F7A4E;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">\ud83d\udcca Exportar a Excel</button></div>';
   h+='<div class="kpis">';
-  h+='<div class="kpi"><div class="lb">Revenue Anual</div><div class="vl">USD '+fmt(t.rev)+'</div><div class="delta">'+t.n+' productos</div></div>';
-  h+='<div class="kpi"><div class="lb">CMG Anual</div><div class="vl" style="color:'+(t.cmg>=0?'var(--gn)':'var(--rd)')+'">USD '+fmt(t.cmg)+'</div><div class="delta">'+t.cmgMargin+'%</div></div>';
-  h+='<div class="kpi"><div class="lb">EBITDA Anual</div><div class="vl" style="color:'+(t.ebitda>=0?'var(--gn)':'var(--rd)')+'">USD '+(t.ebitda<0?'-':'')+fmt(t.ebitda)+'</div><div class="delta" style="color:'+(t.ebitda>=0?'var(--gn)':'var(--rd)')+'">'+t.margin+'%</div></div>';
-  h+='<div class="kpi"><div class="lb">Volumen Anual</div><div class="vl">'+fmt(t.vol)+' kg</div><div class="delta">'+fmt(t.vol/12)+' kg/mes</div></div>';
+  h+='<div class="kpi"><div class="lb">Revenue 2026 (Acum.)</div><div class="vl">USD '+fmt(t.rev)+'</div><div class="delta">Ene\u2013Jun \u00b7 '+t.n+' productos</div></div>';
+  h+='<div class="kpi"><div class="lb">CMG 2026 (Acum.)</div><div class="vl" style="color:'+(t.cmg>=0?'var(--gn)':'var(--rd)')+'">USD '+fmt(t.cmg)+'</div><div class="delta">'+t.cmgMargin+'%</div></div>';
+  h+='<div class="kpi"><div class="lb">EBITDA 2026 (Acum.)</div><div class="vl" style="color:'+(t.ebitda>=0?'var(--gn)':'var(--rd)')+'">USD '+(t.ebitda<0?'-':'')+fmt(t.ebitda)+'</div><div class="delta" style="color:'+(t.ebitda>=0?'var(--gn)':'var(--rd)')+'">'+t.margin+'%</div></div>';
+  h+='<div class="kpi"><div class="lb">Volumen 2026 (Acum.)</div><div class="vl">'+fmt(t.vol)+' kg</div><div class="delta">'+fmt(t.vol/6)+' kg/mes</div></div>';
   h+='<div class="kpi"><div class="lb">Gastos Fijos</div><div class="vl warn">USD '+fd(gf)+'/kg</div><div class="delta">'+t.np+' rent / '+t.nn+' pierde</div></div>';
   h+='<div class="kpi"><div class="lb">EBITDA/kg</div><div class="vl" style="color:'+(t.ebitda>=0?'var(--gn)':'var(--rd)')+'">USD '+fd(t.vol>0?t.ebitda/t.vol:0)+'</div></div></div>';
 
-  var winners=all.filter(function(c){return c.ebitda>0&&c.v>0}).sort(function(a,b){return b.ebitdaAbs-a.ebitdaAbs}).slice(0,10);
-  var losers=all.filter(function(c){return c.ebitda<0&&c.v>0}).sort(function(a,b){return a.ebitdaAbs-b.ebitdaAbs}).slice(0,10);
-  h+='<div class="row"><div class="card"><h3>Top 10 Ganadores</h3><table><thead><tr><th>Línea</th><th>Producto</th><th style="text-align:right">EBITDA USD</th><th>Margen</th><th>Vol</th></tr></thead><tbody>';
+  var winners=allY.filter(function(c){return c.ebitda>0&&c.v>0}).sort(function(a,b){return b.ebitdaAbs-a.ebitdaAbs}).slice(0,10);
+  var losers=allY.filter(function(c){return c.ebitda<0&&c.v>0}).sort(function(a,b){return a.ebitdaAbs-b.ebitdaAbs}).slice(0,10);
+  h+='<div class="row"><div class="card"><h3>Top 10 Ganadores</h3><table><thead><tr><th>L\u00ednea</th><th>Producto</th><th style="text-align:right">EBITDA USD</th><th>Margen</th><th>Vol</th></tr></thead><tbody>';
   for(var i=0;i<winners.length;i++){var c=winners[i];h+='<tr><td style="font-size:10px;color:var(--t2)">'+c.l+'</td><td style="font-weight:500">'+c.p+'</td><td class="mono pos" style="text-align:right">'+fmt(c.ebitdaAbs)+'</td><td class="mono pos">'+pct(c.ebitdaPct)+'</td><td class="mono">'+fmt(c.v)+'</td></tr>';}
   h+='</tbody></table></div>';
-  h+='<div class="card"><h3>Top 10 con Pérdida</h3><table><thead><tr><th>Línea</th><th>Producto</th><th style="text-align:right">Pérdida USD</th><th>Margen</th><th>Vol</th></tr></thead><tbody>';
+  h+='<div class="card"><h3>Top 10 con P\u00e9rdida</h3><table><thead><tr><th>L\u00ednea</th><th>Producto</th><th style="text-align:right">P\u00e9rdida USD</th><th>Margen</th><th>Vol</th></tr></thead><tbody>';
   for(var i=0;i<losers.length;i++){var c=losers[i];h+='<tr><td style="font-size:10px;color:var(--t2)">'+c.l+'</td><td style="font-weight:500">'+c.p+'</td><td class="mono neg" style="text-align:right">('+fmt(c.ebitdaAbs)+')</td><td class="mono neg">'+pct(c.ebitdaPct)+'</td><td class="mono">'+fmt(c.v)+'</td></tr>';}
   h+='</tbody></table></div></div>';
 
-  // By line
-  var lines={};for(var i=0;i<all.length;i++){var c=all[i];var l=c.l||'OTROS';if(!lines[l])lines[l]={rev:0,ebitda:0,cmg:0,vol:0,n:0};lines[l].rev+=c.rev;lines[l].ebitda+=c.ebitdaAbs;lines[l].cmg+=c.cmgAbs;lines[l].vol+=c.v;lines[l].n++;}
+  var lines={};for(var i=0;i<allY.length;i++){var c=allY[i];var l=c.l||'OTROS';if(!lines[l])lines[l]={rev:0,ebitda:0,cmg:0,vol:0,n:0};lines[l].rev+=c.rev;lines[l].ebitda+=c.ebitdaAbs;lines[l].cmg+=c.cmgAbs;lines[l].vol+=c.v;lines[l].n++;}
   var lk=Object.keys(lines).sort(function(a,b){return lines[b].rev-lines[a].rev});
-  h+='<div class="card full"><h3>P&L por Línea</h3><table><thead><tr><th>Línea</th><th style="text-align:right">Revenue</th><th style="text-align:right">EBITDA</th><th>Margen</th><th>Vol</th><th>SKUs</th><th>Status</th></tr></thead><tbody>';
+  h+='<div class="card full"><h3>P&L por L\u00ednea \u2014 Acumulado 2026 (Ene\u2013Jun)</h3><table><thead><tr><th>L\u00ednea</th><th style="text-align:right">Revenue</th><th style="text-align:right">EBITDA</th><th>Margen</th><th>Vol</th><th>SKUs</th><th>Status</th></tr></thead><tbody>';
   for(var i=0;i<lk.length;i++){var l=lk[i];var d=lines[l];var m=d.rev>0?(d.ebitda/d.rev*100).toFixed(1):'0';var color=parseFloat(m)>10?'var(--gn)':parseFloat(m)>0?'var(--or)':'var(--rd)';var tag=parseFloat(m)>10?'<span class="tag tag-ok">RENTABLE</span>':parseFloat(m)>0?'<span class="tag tag-warn">MARGINAL</span>':'<span class="tag tag-bad">PIERDE</span>';
   h+='<tr><td style="font-weight:600">'+l+'</td><td class="mono" style="text-align:right">'+fmt(d.rev)+'</td><td class="mono" style="text-align:right;color:'+color+'">'+(d.ebitda<0?'('+fmt(d.ebitda)+')':fmt(d.ebitda))+'</td><td class="mono" style="color:'+color+'">'+m+'%</td><td class="mono">'+fmt(d.vol)+'</td><td class="mono">'+d.n+'</td><td>'+tag+'</td></tr>';}
   h+='</tbody></table></div>';
