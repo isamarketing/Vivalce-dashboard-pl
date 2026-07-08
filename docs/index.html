@@ -387,7 +387,7 @@ function doFPR(){
   items.sort(function(a,b){return a.l===b.l?(a.p<b.p?-1:1):(a.l<b.l?-1:1);});
   function cell(pp){ return pp===null?'<td class="mono" style="text-align:right;color:var(--t2)">—</td>':'<td class="mono" style="text-align:right">'+fd(pp)+'</td>'; }
   function hdr(label,mk){ var pctTxt=(mk!==null&&mk!==undefined)?' '+(mk*100).toFixed(0)+'%':''; return '<th style="text-align:right">'+label+pctTxt+'</th>'; }
-  var h='<table><thead><tr><th>Línea</th><th>Producto</th><th style="text-align:right">P.Actual</th><th style="text-align:right">EBITDA Act</th>';
+  var h='<table><thead><tr><th>Línea</th><th>Producto</th><th>Familia</th><th style="text-align:right">P.Actual</th><th style="text-align:right">EBITDA Act</th>';
   h+='<th style="text-align:right;color:var(--t2)">Costo+10%</th><th style="text-align:right;color:var(--or)">Mín Commodity</th><th style="text-align:right;color:var(--ac)">Mín 35%</th><th style="text-align:right;color:var(--ac)">Medio 45%</th><th style="text-align:right;color:var(--gn)">Lista 60%</th><th style="text-align:right;color:var(--rd)">Breakeven</th><th>Vol</th></tr></thead><tbody>';
   for(var i=0;i<items.length;i++){var c=items[i];
     h+='<tr><td style="font-size:10px;color:var(--t2)">'+c.l+'</td><td style="font-weight:500">'+c.p+'</td><td style="font-size:10px;color:var(--t2)">'+(c.f||"Sin clasificar")+'</td>';
