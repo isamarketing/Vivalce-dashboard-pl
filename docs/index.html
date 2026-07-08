@@ -714,10 +714,10 @@ function _fp(x){return x===null?'\u2014':'USD '+x.toFixed(2);}
 function exportPricingPDFVtas(){
   var items=_pricingItems();
   var doc=new jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
-  _pricingHeader(doc,'Equipo de Ventas \u00b7 Costo+10% | Min Commodity | Min 35% | Medio 45% | Lista 60%');
-  var body=items.map(function(c){return[c.l.substring(0,22),c.p,_fp(c.pG),_fp(c.pH),_fp(c.pI),_fp(c.pJ),_fp(c.pK),_fp(c.pBE)];});
+  _pricingHeader(doc,'Equipo de Ventas \u00b7 Costo | Min Commodity | Min | Medio | Lista');
+  var body=items.map(function(c){return[c.l.substring(0,22),c.p,_fp(c.pG),_fp(c.pH),_fp(c.pI),_fp(c.pJ),_fp(c.pK)];});
   doc.autoTable({startY:38,
-    head:[['Proveedor','Producto','Costo+10%','Min Commodity','Min 35%','Medio 45%','Lista 60%','Breakeven']],
+    head:[['Proveedor','Producto','Costo','Min Commodity','Min','Medio','Lista']],
     body:body,theme:'grid',
     styles:{fontSize:8,cellPadding:2,font:'helvetica'},
     headStyles:{fillColor:[0,212,170],textColor:[10,14,28],fontStyle:'bold',fontSize:8}});
